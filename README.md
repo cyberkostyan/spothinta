@@ -1,5 +1,12 @@
 # Spothinta
 
+[![Website](https://img.shields.io/website?url=https%3A%2F%2Fspothinta.app&label=spothinta.app)](https://spothinta.app)
+[![Vercel](https://img.shields.io/github/deployments/cyberkostyan/spothinta/Production?label=vercel&logo=vercel)](https://github.com/cyberkostyan/spothinta/deployments)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
 Real-time electricity spot prices for Finland with ML predictions.
 
 **Live:** [spothinta.app](https://spothinta.app)
@@ -46,8 +53,8 @@ Real-time electricity spot prices for Finland with ML predictions.
 
 ```bash
 # Clone the repository
-git clone https://github.com/cyberkostyan/finland-electricity-prices.git
-cd finland-electricity-prices
+git clone https://github.com/cyberkostyan/spothinta.git
+cd spothinta
 
 # Install dependencies
 yarn install

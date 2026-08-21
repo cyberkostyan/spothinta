@@ -12,7 +12,7 @@ Thank you for your interest in contributing to Spothinta! This document provides
 
 ### Reporting Bugs
 
-1. Check if the issue already exists in [GitHub Issues](https://github.com/cyberkostyan/finland-electricity-prices/issues)
+1. Check if the issue already exists in [GitHub Issues](https://github.com/cyberkostyan/spothinta/issues)
 2. If not, create a new issue with:
    - Clear, descriptive title
    - Steps to reproduce
@@ -50,8 +50,8 @@ Thank you for your interest in contributing to Spothinta! This document provides
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/finland-electricity-prices.git
-cd finland-electricity-prices
+git clone https://github.com/YOUR_USERNAME/spothinta.git
+cd spothinta
 
 # Install dependencies
 yarn install
