@@ -47,7 +47,7 @@ Real-time electricity spot prices for Finland with ML predictions.
 ### Prerequisites
 
 - Node.js 18+
-- Yarn
+- pnpm
 
 ### Installation
 
@@ -57,10 +57,10 @@ git clone https://github.com/cyberkostyan/spothinta.git
 cd spothinta
 
 # Install dependencies
-yarn install
+pnpm install
 
 # Start development server
-yarn dev
+pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
@@ -69,12 +69,12 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 | Command | Description |
 |---------|-------------|
-| `yarn dev` | Start development server |
-| `yarn build` | Build for production |
-| `yarn start` | Start production server |
-| `yarn lint` | Run ESLint |
-| `yarn prisma migrate dev` | Run database migrations |
-| `yarn prisma studio` | Open Prisma Studio |
+| `pnpm dev` | Start development server |
+| `pnpm build` | Build for production |
+| `pnpm start` | Start production server |
+| `pnpm lint` | Run ESLint |
+| `pnpm prisma migrate dev` | Run database migrations |
+| `pnpm prisma studio` | Open Prisma Studio |
 
 ## Project Structure
 
@@ -144,10 +144,10 @@ The app can store ML prediction history for comparison with actual prices:
 
 ```bash
 # Run migrations
-yarn prisma migrate dev
+pnpm prisma migrate dev
 
 # Open Prisma Studio to view data
-yarn prisma studio
+pnpm prisma studio
 ```
 
 ## Deployment
@@ -156,7 +156,7 @@ The app is optimized for Vercel deployment:
 
 ```bash
 # Install Vercel CLI
-yarn global add vercel
+pnpm add -g vercel
 
 # Deploy
 vercel
