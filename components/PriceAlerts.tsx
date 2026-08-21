@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useSyncExternalStore } from "react"
 import { useTranslations } from "next-intl"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
@@ -26,23 +26,85 @@ const DEFAULT_SETTINGS: AlertSettings = {
 
 const STORAGE_KEY = "priceAlertSettings"
 
-function loadSettings(): AlertSettings {
-  if (typeof window === "undefined") return DEFAULT_SETTINGS
+const emptySubscribe = () => () => {}
+
+// The snapshot must return a stable reference between renders, so the parsed
+// value is cached keyed by the raw localStorage string.
+let settingsRaw: string | null | undefined
+let settingsCache: AlertSettings = DEFAULT_SETTINGS
+
+function getSettingsSnapshot(): AlertSettings {
+  let raw: string | null = null
   try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) }
-    }
-  } catch (e) {
-    console.error("Failed to load settings:", e)
+    raw = localStorage.getItem(STORAGE_KEY)
+  } catch {
+    raw = null
   }
-  return DEFAULT_SETTINGS
+  if (raw !== settingsRaw) {
+    settingsRaw = raw
+    settingsCache = DEFAULT_SETTINGS
+    if (raw) {
+      try {
+        settingsCache = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
+      } catch (e) {
+        console.error("Failed to load settings:", e)
+      }
+    }
+  }
+  return settingsCache
+}
+
+const getDefaultSettingsSnapshot = () => DEFAULT_SETTINGS
+
+function StatusIndicator({
+  status,
+  t,
+}: {
+  status: SubscriptionStatus
+  t: ReturnType<typeof useTranslations>
+}) {
+  switch (status) {
+    case "active":
+      return (
+        <div className="flex items-center gap-1.5 text-xs text-green-600">
+          <CheckCircle2 className="h-4 w-4" />
+          <span>{t("alerts.statusActive")}</span>
+        </div>
+      )
+    case "error":
+      return (
+        <div className="flex items-center gap-1.5 text-xs text-red-600">
+          <XCircle className="h-4 w-4" />
+          <span>{t("alerts.statusBlocked")}</span>
+        </div>
+      )
+    case "unsupported":
+      return (
+        <div className="flex items-center gap-1.5 text-xs text-orange-600">
+          <AlertCircle className="h-4 w-4" />
+          <span>{t("alerts.statusUnsupported")}</span>
+        </div>
+      )
+    case "loading":
+      return (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </div>
+      )
+    default:
+      return null
+  }
 }
 
 export function PriceAlerts() {
   const t = useTranslations()
-  const [settings, setSettings] = useState<AlertSettings>(DEFAULT_SETTINGS)
-  const [isLoaded, setIsLoaded] = useState(false)
+  const stored = useSyncExternalStore(emptySubscribe, getSettingsSnapshot, getDefaultSettingsSnapshot)
+  const isLoaded = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  )
+  const [overrides, setOverrides] = useState<Partial<AlertSettings>>({})
 
   const {
     isSupported,
@@ -54,31 +116,27 @@ export function PriceAlerts() {
     updateSettings: updatePushSettings,
   } = usePushNotifications()
 
-  // Load settings on mount
-  useEffect(() => {
-    const saved = loadSettings()
-    setSettings(saved)
-    setIsLoaded(true)
-  }, [])
-
-  // Sync enabled state with subscription status
-  useEffect(() => {
-    if (isLoaded && !isPushLoading) {
-      setSettings((s) => ({ ...s, enabled: isSubscribed }))
-    }
-  }, [isSubscribed, isLoaded, isPushLoading])
+  const lowPriceThreshold = overrides.lowPriceThreshold ?? stored.lowPriceThreshold
+  const highPriceThreshold = overrides.highPriceThreshold ?? stored.highPriceThreshold
+  // The subscription status is the source of truth for "enabled" once known
+  const enabled =
+    isLoaded && !isPushLoading ? isSubscribed : (overrides.enabled ?? stored.enabled)
+  const settings: AlertSettings = { enabled, lowPriceThreshold, highPriceThreshold }
 
   // Save settings to localStorage
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ enabled, lowPriceThreshold, highPriceThreshold })
+      )
     }
-  }, [settings, isLoaded])
+  }, [isLoaded, enabled, lowPriceThreshold, highPriceThreshold])
 
   // Sync threshold changes to server (debounced in hook)
   const handleThresholdChange = useCallback(
     (key: "lowPriceThreshold" | "highPriceThreshold", value: number) => {
-      setSettings((s) => ({ ...s, [key]: value }))
+      setOverrides((o) => ({ ...o, [key]: value }))
       if (isSubscribed) {
         updatePushSettings({ [key]: value })
       }
@@ -86,18 +144,18 @@ export function PriceAlerts() {
     [isSubscribed, updatePushSettings]
   )
 
-  const toggleAlerts = async (enabled: boolean) => {
-    if (enabled) {
+  const toggleAlerts = async (enable: boolean) => {
+    if (enable) {
       const success = await subscribe({
         lowPriceThreshold: settings.lowPriceThreshold,
         highPriceThreshold: settings.highPriceThreshold,
       })
       if (success) {
-        setSettings((s) => ({ ...s, enabled: true }))
+        setOverrides((o) => ({ ...o, enabled: true }))
       }
     } else {
       await unsubscribe()
-      setSettings((s) => ({ ...s, enabled: false }))
+      setOverrides((o) => ({ ...o, enabled: false }))
     }
   }
 
@@ -159,40 +217,6 @@ export function PriceAlerts() {
 
   const status = getStatus()
 
-  const StatusIndicator = () => {
-    switch (status) {
-      case "active":
-        return (
-          <div className="flex items-center gap-1.5 text-xs text-green-600">
-            <CheckCircle2 className="h-4 w-4" />
-            <span>{t("alerts.statusActive")}</span>
-          </div>
-        )
-      case "error":
-        return (
-          <div className="flex items-center gap-1.5 text-xs text-red-600">
-            <XCircle className="h-4 w-4" />
-            <span>{t("alerts.statusBlocked")}</span>
-          </div>
-        )
-      case "unsupported":
-        return (
-          <div className="flex items-center gap-1.5 text-xs text-orange-600">
-            <AlertCircle className="h-4 w-4" />
-            <span>{t("alerts.statusUnsupported")}</span>
-          </div>
-        )
-      case "loading":
-        return (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-          </div>
-        )
-      default:
-        return null
-    }
-  }
-
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -205,7 +229,7 @@ export function PriceAlerts() {
             )}
             <CardTitle className="text-lg font-medium">{t("alerts.title")}</CardTitle>
           </div>
-          <StatusIndicator />
+          <StatusIndicator status={status} t={t} />
         </div>
       </CardHeader>
       <CardContent className="space-y-6">

@@ -1,33 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { Shield, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useDismissedFlag } from '@/hooks/useDismissedFlag';
 
 const STORAGE_KEY = 'spothinta_privacy_banner_dismissed';
 
 export function PrivacyInfoBanner() {
   const t = useTranslations('privacyBanner');
-  const [isVisible, setIsVisible] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
+  const { dismissed, dismiss } = useDismissedFlag(STORAGE_KEY);
 
-  useEffect(() => {
-    setIsMounted(true);
-    const dismissed = localStorage.getItem(STORAGE_KEY);
-    if (!dismissed) {
-      setIsVisible(true);
-    }
-  }, []);
-
-  const handleDismiss = () => {
-    localStorage.setItem(STORAGE_KEY, 'true');
-    setIsVisible(false);
-  };
-
-  // Prevent hydration mismatch
-  if (!isMounted || !isVisible) {
+  if (dismissed) {
     return null;
   }
 
@@ -49,7 +34,7 @@ export function PrivacyInfoBanner() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={handleDismiss}
+          onClick={dismiss}
           className="shrink-0"
           aria-label={t('dismiss')}
         >

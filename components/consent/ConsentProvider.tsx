@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useSyncExternalStore, ReactNode } from 'react';
 import { getAnalyticsConsent, setAnalyticsConsent } from '@/lib/consent';
 
 interface ConsentContextType {
@@ -15,20 +15,24 @@ interface ConsentProviderProps {
   children: ReactNode;
 }
 
-export function ConsentProvider({ children }: ConsentProviderProps) {
-  const [analyticsEnabled, setAnalyticsEnabledState] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+const emptySubscribe = () => () => {};
 
-  // Load consent state from cookie on mount
-  useEffect(() => {
-    const consent = getAnalyticsConsent();
-    setAnalyticsEnabledState(consent);
-    setIsLoaded(true);
-  }, []);
+export function ConsentProvider({ children }: ConsentProviderProps) {
+  // Consent cookie is read as an external store; the server snapshot is false
+  // and isLoaded flips to true once the client snapshot takes over.
+  const storedConsent = useSyncExternalStore(emptySubscribe, getAnalyticsConsent, () => false);
+  const isLoaded = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+  const [override, setOverride] = useState<boolean | null>(null);
+
+  const analyticsEnabled = override ?? storedConsent;
 
   const setAnalyticsEnabled = useCallback((enabled: boolean) => {
     setAnalyticsConsent(enabled);
-    setAnalyticsEnabledState(enabled);
+    setOverride(enabled);
   }, []);
 
   return (

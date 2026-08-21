@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { useTranslations } from "next-intl"
 import { MapPin, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useDismissedFlag } from "@/hooks/useDismissedFlag"
 
 const STORAGE_KEY = "spothinta_location_banner_dismissed"
 
@@ -14,33 +14,14 @@ interface LocationBannerProps {
 
 export function LocationBanner({ permissionDenied, onRequestLocation }: LocationBannerProps) {
   const t = useTranslations("locationBanner")
-  const [isVisible, setIsVisible] = useState(false)
-  const [isMounted, setIsMounted] = useState(false)
-
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (permissionDenied) {
-      const dismissed = localStorage.getItem(STORAGE_KEY)
-      if (!dismissed) {
-        setIsVisible(true)
-      }
-    }
-  }, [permissionDenied])
-
-  const handleDismiss = () => {
-    localStorage.setItem(STORAGE_KEY, "true")
-    setIsVisible(false)
-  }
+  const { dismissed, dismiss } = useDismissedFlag(STORAGE_KEY)
 
   const handleShareLocation = () => {
     onRequestLocation()
-    handleDismiss()
+    dismiss()
   }
 
-  if (!isMounted || !isVisible) {
+  if (!permissionDenied || dismissed) {
     return null
   }
 
@@ -63,7 +44,7 @@ export function LocationBanner({ permissionDenied, onRequestLocation }: Location
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleDismiss}
+            onClick={dismiss}
             className="h-6 w-6 text-blue-600 dark:text-blue-400"
             aria-label={t("dismiss")}
           >
