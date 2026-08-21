@@ -32,6 +32,32 @@ interface MonthlyStatsCardProps {
   previousAvg?: number
 }
 
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload as DailyAverage
+    return (
+      <div className="bg-background border rounded-lg shadow-lg p-2 text-xs">
+        <p className="font-medium">{new Date(data.date).toLocaleDateString("fi-FI", { day: "numeric", month: "short" })}</p>
+        <div className="grid grid-cols-3 gap-2 mt-1">
+          <div>
+            <span className="text-muted-foreground">Min: </span>
+            <span className="text-green-600">{formatPrice(data.min)}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Avg: </span>
+            <span>{formatPrice(data.avg)}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Max: </span>
+            <span className="text-red-600">{formatPrice(data.max)}</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  return null
+}
+
 export function MonthlyStatsCard({
   month,
   year,
@@ -52,32 +78,6 @@ export function MonthlyStatsCard({
     if (Math.abs(trendPercent) < 1) return "text-muted-foreground"
     if (trendPercent > 0) return "text-red-500"
     return "text-green-500"
-  }
-
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload as DailyAverage
-      return (
-        <div className="bg-background border rounded-lg shadow-lg p-2 text-xs">
-          <p className="font-medium">{new Date(data.date).toLocaleDateString("fi-FI", { day: "numeric", month: "short" })}</p>
-          <div className="grid grid-cols-3 gap-2 mt-1">
-            <div>
-              <span className="text-muted-foreground">Min: </span>
-              <span className="text-green-600">{formatPrice(data.min)}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Avg: </span>
-              <span>{formatPrice(data.avg)}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Max: </span>
-              <span className="text-red-600">{formatPrice(data.max)}</span>
-            </div>
-          </div>
-        </div>
-      )
-    }
-    return null
   }
 
   return (

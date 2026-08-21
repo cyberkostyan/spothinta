@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useCallback, useSyncExternalStore } from "react"
 
 const STORAGE_KEY = "userLocation"
 const DEFAULT_LAT = 60.17
@@ -26,20 +26,38 @@ interface SavedLocation extends LocationData {
   cityName?: string
 }
 
-function getSavedLocation(): SavedLocation | null {
+const emptySubscribe = () => () => {}
+
+// The snapshot must return a stable reference between renders, so the parsed
+// value is cached keyed by the raw localStorage string.
+let savedLocationRaw: string | null | undefined
+let savedLocationCache: SavedLocation | null = null
+
+function getSavedLocationSnapshot(): SavedLocation | null {
+  let raw: string | null = null
   try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      const parsed = JSON.parse(saved)
-      if (typeof parsed.lat === "number" && typeof parsed.lon === "number") {
-        return { lat: parsed.lat, lon: parsed.lon, cityName: parsed.cityName }
+    raw = localStorage.getItem(STORAGE_KEY)
+  } catch {
+    raw = null
+  }
+  if (raw !== savedLocationRaw) {
+    savedLocationRaw = raw
+    savedLocationCache = null
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw)
+        if (typeof parsed.lat === "number" && typeof parsed.lon === "number") {
+          savedLocationCache = { lat: parsed.lat, lon: parsed.lon, cityName: parsed.cityName }
+        }
+      } catch {
+        // Ignore parse errors
       }
     }
-  } catch {
-    // Ignore parse errors
   }
-  return null
+  return savedLocationCache
 }
+
+const getServerLocationSnapshot = () => null
 
 async function reverseGeocode(lat: number, lon: number): Promise<string | null> {
   try {
@@ -56,26 +74,13 @@ async function reverseGeocode(lat: number, lon: number): Promise<string | null> 
 }
 
 export function useGeolocation(): UseGeolocationResult {
-  const [lat, setLat] = useState(DEFAULT_LAT)
-  const [lon, setLon] = useState(DEFAULT_LON)
-  const [isDefault, setIsDefault] = useState(true)
+  const saved = useSyncExternalStore(emptySubscribe, getSavedLocationSnapshot, getServerLocationSnapshot)
+  const [requested, setRequested] = useState<SavedLocation | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [cityName, setCityName] = useState<string | null>(null)
   const [permissionDenied, setPermissionDenied] = useState(false)
 
-  // Check localStorage on mount
-  useEffect(() => {
-    const saved = getSavedLocation()
-    if (saved) {
-      setLat(saved.lat)
-      setLon(saved.lon)
-      setIsDefault(false)
-      if (saved.cityName) {
-        setCityName(saved.cityName)
-      }
-    }
-  }, [])
+  const location = requested ?? saved
 
   const requestLocation = useCallback(() => {
     if (!navigator.geolocation) {
@@ -92,13 +97,11 @@ export function useGeolocation(): UseGeolocationResult {
           lat: Math.round(position.coords.latitude * 100) / 100,
           lon: Math.round(position.coords.longitude * 100) / 100,
         }
-        setLat(coords.lat)
-        setLon(coords.lon)
-        setIsDefault(false)
+        setRequested(coords)
         setLoading(false)
 
         const city = await reverseGeocode(coords.lat, coords.lon)
-        if (city) setCityName(city)
+        if (city) setRequested({ ...coords, cityName: city })
 
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...coords, cityName: city }))
@@ -116,5 +119,14 @@ export function useGeolocation(): UseGeolocationResult {
     )
   }, [])
 
-  return { lat, lon, isDefault, loading, error, permissionDenied, cityName, requestLocation }
+  return {
+    lat: location?.lat ?? DEFAULT_LAT,
+    lon: location?.lon ?? DEFAULT_LON,
+    isDefault: location === null,
+    loading,
+    error,
+    permissionDenied,
+    cityName: location?.cityName ?? null,
+    requestLocation,
+  }
 }
