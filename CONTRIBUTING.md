@@ -44,7 +44,7 @@ Thank you for your interest in contributing to Spothinta! This document provides
 ### Prerequisites
 
 - Node.js 18+
-- Yarn (not npm)
+- pnpm (not npm or yarn)
 
 ### Getting Started
 
@@ -54,20 +54,20 @@ git clone https://github.com/YOUR_USERNAME/spothinta.git
 cd spothinta
 
 # Install dependencies
-yarn install
+pnpm install
 
 # Start development server
-yarn dev
+pnpm dev
 ```
 
 ### Running Tests
 
 ```bash
 # Lint code
-yarn lint
+pnpm lint
 
 # Build to check for errors
-yarn build
+pnpm build
 ```
 
 ## Code Style
@@ -148,7 +148,7 @@ Add price alert notification sound
 - [ ] Changes work in both light and dark mode
 - [ ] Translations added for both languages (if applicable)
 - [ ] No console errors or warnings
-- [ ] `yarn build` completes successfully
+- [ ] `pnpm build` completes successfully
 - [ ] Tested on mobile and desktop
 
 ## Project Structure
